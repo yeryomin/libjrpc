@@ -1,0 +1,24 @@
+CC       = $(CROSS_COMPILE)gcc
+LD       = $(CROSS_COMPILE)ld
+AR       = $(CROSS_COMPILE)ar
+RANLIB   = $(CROSS_COMPILE)ranlib
+
+CFLAGS   = -Wall -fPIC -O2 -g3
+
+SRCDIR   = ..
+JSMNSRC  = $(SRCDIR)/jsmn
+IPSCSRC  = $(SRCDIR)/libipsc
+FMTSRC   = $(SRCDIR)/libfmt
+
+IPSCINC  = -I$(IPSCSRC)
+IPSCLIB  = -L$(IPSCSRC) -lipsc
+
+FMTINC   = -I$(FMTSRC)
+FMTLIB   = -L$(FMTSRC) -lfmt
+
+JSMNINC  = -I$(JSMNSRC)
+
+INCLUDES = $(IPSCINC) $(FMTINC) $(JSMNINC)
+LDFLAGS  = $(IPSCLIB) $(FMTLIB)
+
+include main.mk

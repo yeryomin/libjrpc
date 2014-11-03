@@ -1,0 +1,25 @@
+libjrpc
+=======
+
+JSON-RPC client/server library
+
+
+Features
+--------
+
+* Pure C JSON-RPC 2.0 client and server implementation
+* Lightweight and simple
+* Uses libipsc and libfmt
+
+
+Documentation
+-------------
+
+The code and examples.
+
+
+TODO
+----
+
+* Bulk request/reply support
+* etc?

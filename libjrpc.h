@@ -55,6 +55,7 @@
 #define JRPC_FLAG_SIGN			0x01
 #define JRPC_FLAG_ENCRYPT		0x02
 #define JRPC_FLAG_BINARIZE		0x04
+#define JRPC_FLAG_TLS			0x08
 
 /* return codes */
 #define JRPC_SUCCESS			1
@@ -64,6 +65,8 @@
 #define JRPC_ERR_SEND			-3
 #define JRPC_ERR_NORESULT		-4
 #define JRPC_ERR_UNKNOWN_REPLY_TYPE	-5
+#define JRPC_ERR_TLSINIT		-6
+#define JRPC_ERR_TLSCONN		-7
 
 /* param availability flags */
 enum {
@@ -105,6 +108,9 @@ typedef struct jrpc_conn_t {
 	int   port;
 	int   timeout;
 	int   flags;
+	char *tlscert;
+	char *tlskey;
+	char *tlsca;
 } jrpc_conn_t;
 
 /* server parameters */
@@ -137,7 +143,10 @@ typedef struct jrpc_req_t {
 	.proto    = JRPC_DEFAULT_PROTO,		\
 	.host     = JRPC_DEFAULT_HOST,		\
 	.timeout  = JRPC_DEFAULT_TIMEOUT,	\
-	.flags    = 0				\
+	.flags    = 0,				\
+	.tlscert  = NULL,			\
+	.tlskey   = NULL,			\
+	.tlsca    = NULL			\
 }
 
 /* server init macro */

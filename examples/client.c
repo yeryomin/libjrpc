@@ -33,6 +33,10 @@ int main( int argc, char **argv )
 	rpc_req.method     = argv[1];
 	rpc_req.params     = params;
 	rpc_req.res        = &res;
+//	rpc_req.conn.flags |= JRPC_FLAG_TLS;
+//	rpc_req.conn.tlscert= "client.crt";
+//	rpc_req.conn.tlskey = "client.key";
+//	rpc_req.conn.tlsca  = "ca.crt";
 
 	err = jrpc_request( &rpc_req );
 	if ( err < 0 ) {

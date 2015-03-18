@@ -30,6 +30,17 @@ void *jrpc_server( void *args )
 		return NULL;
 	}
 
+	if ( jrpc->conn.flags & JRPC_FLAG_TLS ) {
+		if ( ipsc_tls_init( ipsc, jrpc->conn.tlscert,
+					  jrpc->conn.tlskey,
+					  jrpc->conn.tlsca ) )
+		{
+			ipsc_close( ipsc );
+			syslog( LOG_WARNING,"jrpc_server(tls_init): %m" );
+			return NULL;
+		}
+	}
+
 	ipsc->cb_args = args;
 
 	/* joinable thread callback helper */
@@ -70,6 +81,20 @@ ssize_t jrpc_request( jrpc_req_t *req )
 	if ( !ipsc ) {
 		sb = JRPC_ERR_GENERIC;
 		goto exit;
+	}
+
+	if ( req->conn.flags & JRPC_FLAG_TLS ) {
+		if ( ipsc_tls_init( ipsc, req->conn.tlscert,
+					  req->conn.tlskey,
+					  req->conn.tlsca ) )
+		{
+			sb = JRPC_ERR_TLSINIT;
+			goto exit;
+		}
+		if ( ipsc_connect_tls( ipsc ) ) {
+			sb = JRPC_ERR_TLSCONN;
+			goto exit;
+		}
 	}
 
 	fmt_object( &root );

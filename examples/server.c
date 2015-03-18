@@ -58,6 +58,10 @@ int main( int argc, char **argv )
 	json_rpc.epsleep     = 100;
 	json_rpc.methods     = rpc_methods;
 //	json_rpc.conn.flags |= JRPC_FLAG_BINARIZE;
+//	json_rpc.conn.flags |= JRPC_FLAG_TLS;
+//	json_rpc.conn.tlscert= "server.crt";
+//	json_rpc.conn.tlskey = "server.key";
+//	json_rpc.conn.tlsca  = "ca.crt";
 
 	jrpc_server( &json_rpc );
 

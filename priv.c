@@ -130,6 +130,7 @@ ssize_t jrpc_recv_json( ipsc_t *ipsc, fmt_t *p )
 	char *buf = NULL;
 	size_t buflen = 0;
 	ssize_t rb = 0;
+	ssize_t trb = 0;
 	int flags;
 	int socktype;
 	int timeout;
@@ -157,12 +158,24 @@ ssize_t jrpc_recv_json( ipsc_t *ipsc, fmt_t *p )
 			break;
 	}
 
+	/* TODO: add hard memory limit */
 	buf = (char *)malloc( buflen );
 	if ( flags & JRPC_FLAG_BINARIZE )
 		rb = jrpc_recv_bin( ipsc, rt.bin_ctx,
 				    buf, buflen - 1, timeout );
 	else
-		rb = ipsc_recv( ipsc, buf, buflen - 1, timeout );
+		while ( (trb = ipsc_recv( ipsc, buf + rb,
+					  buflen - rb - 1, timeout )) > 0 )
+		{
+			/* lower the timeout after first data received */
+			if ( timeout > 0 )
+				timeout = 10;
+			rb += trb;
+			if ( rb > buflen - 2 ) {
+				buflen += buflen;
+				buf = (char *)realloc( buf, buflen );
+			}
+		}
 
 	if ( rb < 2 )
 		rb = 0;

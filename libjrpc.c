@@ -33,7 +33,8 @@ void *jrpc_server( void *args )
 	if ( jrpc->conn.flags & JRPC_FLAG_TLS ) {
 		if ( ipsc_tls_init( ipsc, jrpc->conn.tlscert,
 					  jrpc->conn.tlskey,
-					  jrpc->conn.tlsca ) )
+					  jrpc->conn.tlsca,
+					  jrpc->conn.tlsdh ) )
 		{
 			ipsc_close( ipsc );
 			syslog( LOG_WARNING,"jrpc_server(tls_init): %m" );
@@ -86,7 +87,8 @@ ssize_t jrpc_request( jrpc_req_t *req )
 	if ( req->conn.flags & JRPC_FLAG_TLS ) {
 		if ( ipsc_tls_init( ipsc, req->conn.tlscert,
 					  req->conn.tlskey,
-					  req->conn.tlsca ) )
+					  req->conn.tlsca,
+					  req->conn.tlsdh ) )
 		{
 			sb = JRPC_ERR_TLSINIT;
 			goto exit;

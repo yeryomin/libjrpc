@@ -111,6 +111,7 @@ typedef struct jrpc_conn_t {
 	char *tlscert;
 	char *tlskey;
 	char *tlsca;
+	char *tlsdh;
 } jrpc_conn_t;
 
 /* server parameters */
@@ -146,7 +147,8 @@ typedef struct jrpc_req_t {
 	.flags    = 0,				\
 	.tlscert  = NULL,			\
 	.tlskey   = NULL,			\
-	.tlsca    = NULL			\
+	.tlsca    = NULL,			\
+	.tlsdh    = NULL			\
 }
 
 /* server init macro */

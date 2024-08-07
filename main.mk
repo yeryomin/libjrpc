@@ -4,11 +4,12 @@ HEADERS = $(NAME).h priv.h
 OBJECTS = $(SOURCES:.c=.o)
 SHARED  = $(NAME).so
 STATIC  = $(NAME).a
+RANLIB ?= ranlib
 
 default: all
-all: $(SOURCES) $(SHARED) $(STATIC)
+all: $(HEADERS) $(SOURCES) $(SHARED) $(STATIC)
 
-.c.o: $(HEADERS)
+.c.o:
 	$(CC) -c $(CFLAGS) $(INCLUDES) $< -o $@
 
 $(SHARED): $(OBJECTS)

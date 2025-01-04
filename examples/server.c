@@ -11,8 +11,8 @@
 ssize_t check_status( ipsc_t *ipsc, void *params, void *reqid )
 {
 	if ( !(rand()%2) ) {
-		jrpc_send( ipsc, fmt_string("BUSY"),
-			   (fmt_t *)reqid, JRPC_REPLY_TYPE_ERROR );
+		jrpc_send( ipsc, json_object_new_string( "BUSY" ),
+			   (json_object *)reqid, JRPC_REPLY_TYPE_ERROR );
 		/* return 0 to indicate that we don't want further
 		   handler executions, without trigerring an error */
 		return 0;
@@ -26,24 +26,24 @@ ssize_t rpc_method_system_describe( ipsc_t *ipsc, void *params, void *reqid )
 {
 	/* simple method which doesn't take any params
 	   and only returns some string */
-	return jrpc_send( ipsc, fmt_string( "JSON-RPC server" ),
-			  (fmt_t *)reqid, JRPC_REPLY_TYPE_RESULT );
+	return jrpc_send( ipsc, json_object_new_string( "JSON-RPC server" ),
+			  (json_object *)reqid, JRPC_REPLY_TYPE_RESULT );
 }
 
 ssize_t rpc_method_return_params( ipsc_t *ipsc, void *params, void *reqid )
 {
-	return jrpc_send( ipsc, (fmt_t *)params, (fmt_t *)reqid,
+	return jrpc_send( ipsc, (json_object *)params, (json_object *)reqid,
 			  JRPC_REPLY_TYPE_RESULT );
 }
 
 ssize_t rpc_method_return_params2( ipsc_t *ipsc, void *params, void *reqid )
 {
-	fmt_t *res = (fmt_t *)params;
+	json_object *res = (json_object *)params;
 	/* params is set to NULL if there are no params in request */
 	if ( params == NULL )
-		res = fmt_string("No params set!");
+		res = json_object_new_string( "No params set!" );
 
-	return jrpc_send( ipsc, res, (fmt_t *)reqid, JRPC_REPLY_TYPE_RESULT );
+	return jrpc_send( ipsc, res, (json_object *)reqid, JRPC_REPLY_TYPE_RESULT );
 }
 
 int main( int argc, char **argv )
@@ -61,9 +61,11 @@ int main( int argc, char **argv )
 //	json_rpc.conn.flags |= JRPC_FLAG_TLS;
 //	json_rpc.conn.tlscert= "server.crt";
 //	json_rpc.conn.tlskey = "server.key";
-//	json_rpc.conn.tlsca  = "ca.crt";
+//	json_rpc.conn.tlsca  = "rootCA.crt";
+//	json_rpc.conn.tlsdh  = "dhparams2048.pem";
 
-	jrpc_server( &json_rpc );
+	if ( !jrpc_server( &json_rpc ) )
+		unlink( a_daemon_pidfile );
 
 	exit(EXIT_FAILURE);
 }

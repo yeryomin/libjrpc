@@ -9,22 +9,17 @@
 int main( int argc, char **argv )
 {
 	int err = 0;
-	fmt_t res = FMT_NULL;
-	fmt_t tmp = FMT_NULL;
-	fmt_t *params = NULL;
-	char *reply = NULL;
+	json_object *res = NULL;
+	json_object *params = NULL;
+	const char *reply = NULL;
 
 	if ( argc < 2 ) {
 		printf("Usage: %s <method> <params>\n", argv[0] );
 		exit(EXIT_FAILURE);
 	}
 
-	if ( argc > 2 ) {
-		if ( !fmt_load_string( argv[2], strlen(argv[2]), &tmp ) )
-			params = &tmp;
-		else
-			params = fmt_string(argv[2]);
-	}
+	if ( argc > 2 )
+		params = json_tokener_parse( argv[2] );
 
 	jrpc_req_t rpc_req = JRPC_CLIENT_DEFAULT;
 	rpc_req.conn.proto = IPPROTO_TCP;
@@ -36,12 +31,13 @@ int main( int argc, char **argv )
 //	rpc_req.conn.flags |= JRPC_FLAG_TLS;
 //	rpc_req.conn.tlscert= "client.crt";
 //	rpc_req.conn.tlskey = "client.key";
-//	rpc_req.conn.tlsca  = "ca.crt";
+//	rpc_req.conn.tlsca  = "rootCA.crt";
+//	rpc_req.conn.tlsdh  = "dhparams2048.pem";
 
 	err = jrpc_request( &rpc_req );
 	if ( err < 0 ) {
 		printf( "jrpc_request() error: %i (%m)\n", err );
-		exit(EXIT_FAILURE);
+		exit( EXIT_FAILURE );
 	}
 
 	if ( err == JRPC_ERR_USER )
@@ -49,16 +45,15 @@ int main( int argc, char **argv )
 	else
 		printf( "Received some result!\n" );
 
-	if ( fmt_dump_string( &res, NULL, &reply ) ) {
-		printf( "fmt_dump_string() error: %i (%m)\n", err );
-		exit(EXIT_FAILURE);
+	reply = json_object_to_json_string_ext( res, JSON_C_TO_STRING_PRETTY_TAB );
+	if ( !reply ) {
+		printf( "json_object_to_json_string_ex() error\n" );
+		json_object_put( res );
+		exit( EXIT_FAILURE );
 	}
 
 	printf( "%s\n", reply );
-
-	free( reply );
-	fmt_free( &res );
-	fmt_free( &tmp );
+	json_object_put( res );
 
 	exit(EXIT_SUCCESS);
 }

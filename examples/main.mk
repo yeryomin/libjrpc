@@ -2,7 +2,7 @@ SOURCES    = server.c client.c
 OBJECTS    = $(SOURCES:.c=.o)
 BINARIES   = server client
 
-LDFLAGS += -lssl -lcrypto -ldl
+LDFLAGS += -lssl -lcrypto -ldl -ljson-c
 
 default: all
 all: $(BINARIES)

@@ -9,7 +9,7 @@ Features
 
 * Pure C JSON-RPC 2.0 client and server implementation
 * Lightweight and simple
-* Uses libipsc and libfmt
+* Uses libipsc and libjson-c
 * TLS support (via libipsc)
 
 

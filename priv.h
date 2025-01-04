@@ -21,7 +21,7 @@
 
 #include "libjrpc.h"
 
-extern void jrpc_add_version( fmt_t *root, fmt_t *id );
-extern ssize_t jrpc_send_json( ipsc_t *ipsc, fmt_t *root );
-extern ssize_t jrpc_recv_json( ipsc_t *ipsc, fmt_t *p );
+extern void jrpc_add_version( json_object *root, json_object *id );
+extern ssize_t jrpc_send_json( ipsc_t *ipsc, json_object *root );
+extern ssize_t jrpc_recv_json( ipsc_t *ipsc, json_object **p );
 extern ssize_t jrpc_process( ipsc_t *ipsc );

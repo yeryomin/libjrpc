@@ -46,58 +46,60 @@ static ssize_t jrpc_recv_bin( ipsc_t *sock, void *ctx,
 	return -1;
 }
 
-static ssize_t jrpc_parse_error( ipsc_t *ipsc, fmt_t *id )
+static ssize_t jrpc_parse_error( ipsc_t *ipsc, json_object *id )
 {
 	return jrpc_error( ipsc, id,
 			   JRPC_CODE_PARSE_ERROR,
 			   JRPC_ERR_PARSE_ERROR );
 }
 
-static ssize_t jrpc_invalid_request( ipsc_t *ipsc, fmt_t *id )
+static ssize_t jrpc_invalid_request( ipsc_t *ipsc, json_object *id )
 {
 	return jrpc_error( ipsc, id,
 			   JRPC_CODE_INVALID_REQUEST,
 			   JRPC_ERR_INVALID_REQUEST );
 }
 
-static ssize_t jrpc_method_not_found( ipsc_t *ipsc, fmt_t *id )
+static ssize_t jrpc_method_not_found( ipsc_t *ipsc, json_object *id )
 {
 	return jrpc_error( ipsc, id,
 			   JRPC_CODE_METHOD_NOT_FOUND,
 			   JRPC_ERR_METHOD_NOT_FOUND );
 }
 
-static int jrpc_check_version( fmt_t *root )
+static int jrpc_check_version( json_object *root )
 {
-	char *version = NULL;
+	int ret = 0;
+	json_object *jver = json_object_object_get( root, JRPC_KEY_JSONRPC );
+	const char *version = json_object_get_string( jver );
 
-	if ( fmt_get_string( root, NULL, JRPC_KEY_JSONRPC, &version ) )
-		return -1;
-
-	if ( strncmp( version, JRPC_KEY_VERSION,
-		      strlen(JRPC_KEY_VERSION) + 1 ) )
-	{
-		free( version );
-		return -1;
+	if ( !version ) {
+		ret = -1;
+		goto exit;
 	}
 
-	free( version );
-	return 0;
+	if ( strncmp( version, JRPC_KEY_VERSION, strlen(JRPC_KEY_VERSION) + 1 ) )
+		ret = -1;
+
+exit:
+	return ret;
 }
 
-void jrpc_add_version( fmt_t *root, fmt_t *id )
+void jrpc_add_version( json_object *root, json_object *id )
 {
-	fmt_set_new( root, JRPC_KEY_JSONRPC, fmt_string( JRPC_KEY_VERSION ) );
+	json_object_object_add( root, JRPC_KEY_JSONRPC,
+				json_object_new_string( JRPC_KEY_VERSION ) );
+
 	if ( id )
-		fmt_set_new( root, JRPC_KEY_ID, id );
+		json_object_object_add( root, JRPC_KEY_ID, id );
 	else
-		fmt_set_new( root, JRPC_KEY_ID, fmt_null() );
+		json_object_object_add( root, JRPC_KEY_ID, NULL );
 }
 
-ssize_t jrpc_send_json( ipsc_t *ipsc, fmt_t *root )
+ssize_t jrpc_send_json( ipsc_t *ipsc, json_object *root )
 {
-	char *buf = NULL;
-	size_t buflen = fmt_dump_len( root );
+	const char *buf = NULL;
+	size_t buflen = 0;
 	ssize_t sb = 0;
 	int flags;
 	jrpc_runtime_t rt;
@@ -110,22 +112,23 @@ ssize_t jrpc_send_json( ipsc_t *ipsc, fmt_t *root )
 		rt = ((jrpc_req_t *)ipsc->cb_args)->rt;
 	}
 
-	if ( fmt_dump_string( root, NULL, &buf ) ) {
+	buf = json_object_to_json_string_length( root, JSON_C_TO_STRING_PLAIN,
+								&buflen );
+	if ( !buf ) {
 		sb = JRPC_ERR_GENERIC;
 		goto exit;
 	}
 
 	if ( flags & JRPC_FLAG_BINARIZE )
-		sb = jrpc_send_bin( ipsc, rt.bin_ctx, buf, buflen );
+		sb = jrpc_send_bin( ipsc, rt.bin_ctx, (char *)buf, buflen );
 	else
 		sb = ipsc_send( ipsc, buf, buflen );
 
 exit:
-	free( buf );
 	return sb;
 }
 
-ssize_t jrpc_recv_json( ipsc_t *ipsc, fmt_t *p )
+ssize_t jrpc_recv_json( ipsc_t *ipsc, json_object **p )
 {
 	char *buf = NULL;
 	size_t buflen = 0;
@@ -135,6 +138,7 @@ ssize_t jrpc_recv_json( ipsc_t *ipsc, fmt_t *p )
 	int socktype;
 	int timeout;
 	jrpc_runtime_t rt;
+	struct json_tokener *tok = json_tokener_new();
 
 	if ( ipsc->flags & IPSC_FLAG_SERVER ) {
 		flags = ((jrpc_t *)ipsc->cb_args)->conn.flags;
@@ -177,13 +181,16 @@ ssize_t jrpc_recv_json( ipsc_t *ipsc, fmt_t *p )
 			}
 		}
 
+	buf[ rb ] = '\0';
 	if ( rb < 2 )
 		rb = 0;
 
-	if ( fmt_load_string( buf, (size_t)rb, p ) )
+	*p = json_tokener_parse_ex( tok, buf, (int)rb );
+	if ( !*p )
 		rb = -1;
 
 	free( buf );
+	json_tokener_free( tok );
 	return rb;
 }
 
@@ -192,14 +199,13 @@ ssize_t jrpc_process( ipsc_t *ipsc )
 	int i, idx;
 	size_t rb;
 	size_t sb = 0;
-	fmt_t p = FMT_NULL;
-	fmt_t tmp = FMT_NULL;
-	fmt_t tmpid = FMT_NULL;
-	fmt_t *params = NULL;
-	fmt_t *id = NULL;
+	json_object *p = NULL;
+	json_object *id = NULL;
+	json_object *jm = NULL;
+	json_object *params = NULL;
 	jrpc_cb_t cb;
 	jrpc_t *jrpc = (jrpc_t *)ipsc->cb_args;
-	char *method = NULL;
+	const char *method = NULL;
 
 	ipsc->flags |= IPSC_FLAG_SERVER;
 
@@ -210,19 +216,20 @@ ssize_t jrpc_process( ipsc_t *ipsc )
 		goto exit;
 	}
 
-	if ( !fmt_get( &p, NULL, JRPC_KEY_ID, &tmpid ) )
-		id = &tmpid;
+	id = json_object_object_get( p, JRPC_KEY_ID );
 
 #ifndef JRPC_LITE
 	/* check version string if we use standart fields */
-	if ( jrpc_check_version( &p ) ) {
+	if ( jrpc_check_version( p ) ) {
 		sb = jrpc_invalid_request( ipsc, id );
 		goto exit;
 	}
 #endif
 
 	/* send error back if 'method' key is not found */
-	if ( fmt_get_string( &p, NULL, JRPC_KEY_METHOD, &method ) ) {
+	jm = json_object_object_get( p, JRPC_KEY_METHOD );
+	method = json_object_get_string( jm );
+	if ( !method ) {
 		sb = jrpc_invalid_request( ipsc, id );
 		goto exit;
 	}
@@ -234,15 +241,14 @@ ssize_t jrpc_process( ipsc_t *ipsc )
 
 		switch ( jrpc->methods[i].params ) {
 		case JRPC_CB_HAS_PARAMS:
-			if ( fmt_get( &p, NULL, JRPC_KEY_PARAMS, &tmp ) ) {
+			params = json_object_object_get( p, JRPC_KEY_PARAMS );
+			if ( !params ) {
 				sb = jrpc_invalid_params( ipsc, id );
 				goto exit;
 			}
-			params = &tmp;
 			break;
 		case JRPC_CB_OPT_PARAMS:
-			if ( !fmt_get( &p, NULL, JRPC_KEY_PARAMS, &tmp ) )
-				params = &tmp;
+			params = json_object_object_get( p, JRPC_KEY_PARAMS );
 			break;
 		case JRPC_CB_NO_PARAMS:
 		default:
@@ -279,11 +285,6 @@ ssize_t jrpc_process( ipsc_t *ipsc )
 exit:
 	if ( sb < 0 )
 		syslog( LOG_WARNING, "jrpc_process(recv|send): %m (%li)", sb );
-
-	free( method );
-	fmt_free( &p );
-	fmt_free( id );
-	fmt_free( params );
 
 	return sb;
 }

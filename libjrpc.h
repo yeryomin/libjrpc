@@ -16,8 +16,8 @@
 #ifndef _JRPC_H_
 #define _JRPC_H_
 
+#include <json-c/json.h>
 #include <libipsc.h>
-#include <libfmt.h>
 
 #define JRPC_KEY_JSONRPC		"jsonrpc"
 #define JRPC_KEY_VERSION		"2.0"
@@ -128,9 +128,9 @@ typedef struct jrpc_t {
 typedef struct jrpc_req_t {
 	jrpc_conn_t conn;
 	char  *method;
-	fmt_t *params;
-	fmt_t *id;
-	fmt_t *res;
+	json_object *params;
+	json_object *id;
+	json_object **res;
 	jrpc_runtime_t rt;
 } jrpc_req_t;
 
@@ -176,12 +176,12 @@ void *jrpc_server( void *args );
 ssize_t jrpc_request( jrpc_req_t *req );
 
 /* to be used in method handlers */
-ssize_t jrpc_send( ipsc_t *ipsc, fmt_t *obj, fmt_t *id, int type );
+ssize_t jrpc_send( ipsc_t *ipsc, json_object *obj, json_object *id, int type );
 
 /* error helpers */
-ssize_t jrpc_error( ipsc_t *ipsc, fmt_t *id, int code, const char *message );
-ssize_t jrpc_invalid_params( ipsc_t *ipsc, fmt_t *id );
-ssize_t jrpc_internal_error( ipsc_t *ipsc, fmt_t *id );
-ssize_t jrpc_not_implemented( ipsc_t *ipsc, fmt_t *id );
+ssize_t jrpc_error( ipsc_t *ipsc, json_object *id, int code, const char *message );
+ssize_t jrpc_invalid_params( ipsc_t *ipsc, json_object *id );
+ssize_t jrpc_internal_error( ipsc_t *ipsc, json_object *id );
+ssize_t jrpc_not_implemented( ipsc_t *ipsc, json_object *id );
 
 #endif /* _JRPC_H_ */

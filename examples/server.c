@@ -38,10 +38,12 @@ ssize_t rpc_method_return_params( ipsc_t *ipsc, void *params, void *reqid )
 
 ssize_t rpc_method_return_params2( ipsc_t *ipsc, void *params, void *reqid )
 {
-	json_object *res = (json_object *)params;
+	json_object *res = NULL;
 	/* params is set to NULL if there are no params in request */
 	if ( params == NULL )
 		res = json_object_new_string( "No params set!" );
+	else
+		json_object_deep_copy( params, &res, NULL );
 
 	return jrpc_send( ipsc, res, (json_object *)reqid, JRPC_REPLY_TYPE_RESULT );
 }

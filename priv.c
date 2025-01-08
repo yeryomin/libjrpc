@@ -283,6 +283,8 @@ ssize_t jrpc_process( ipsc_t *ipsc )
 	sb = jrpc_method_not_found( ipsc, id );
 
 exit:
+	json_object_put( p );
+
 	if ( sb < 0 )
 		syslog( LOG_WARNING, "jrpc_process(recv|send): %m (%li)", sb );
 
